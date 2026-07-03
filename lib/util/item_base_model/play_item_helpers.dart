@@ -93,16 +93,12 @@ extension PhotoAlbumExtension on PhotoAlbumModel? {
         includeItemTypes: FladderItemType.galleryItem.map((e) => e.dtoKind).toList(),
         recursive: true));
 
-    _showLoadingIndicator(context, albumModel, op);
+    final loader = _showLoadingIndicator(context, albumModel, op);
 
     final getChildItems = await op.valueOrCancellation(null);
-    if (op.isCanceled || getChildItems == null) {
-      if (!op.isCanceled) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          log('Error closing loading dialog: $e');
-        }
+    if (loader.isCancelled || getChildItems == null) {
+      loader.dismissDialog();
+      if (!loader.isCancelled) {
         FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
@@ -110,11 +106,7 @@ extension PhotoAlbumExtension on PhotoAlbumModel? {
 
     final photos = getChildItems.body?.items.whereType<PhotoModel>() ?? [];
 
-    try {
-      Navigator.of(context, rootNavigator: true).pop();
-    } catch (e) {
-      log('Error closing loading dialog: $e');
-    }
+    loader.dismissDialog();
 
     if (photos.isEmpty) {
       return;
@@ -151,23 +143,20 @@ extension ChannelModelExtension on ChannelModel? {
           startPosition: Duration.zero,
         ));
 
-    _showLoadingIndicator(context, this!, op);
+    final loader = _showLoadingIndicator(context, this!, op);
 
     final model = await op.valueOrCancellation(null);
 
-    if (op.isCanceled || model == null) {
-      if (!op.isCanceled) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          log('Error closing loading dialog: $e');
-        }
+    if (loader.isCancelled || model == null) {
+      loader.dismissDialog();
+      if (!loader.isCancelled) {
         FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
 
     if (model is! TvPlaybackModel) {
+      loader.dismissDialog();
       return;
     }
 
@@ -178,7 +167,7 @@ extension ChannelModelExtension on ChannelModel? {
         channel: this,
       ),
       ref: ref,
-      cancelOperation: op,
+      loader: loader,
     );
   }
 }
@@ -620,26 +609,20 @@ extension ItemBaseModelExtensions on ItemBaseModel? {
           startPosition: startPosition,
         ));
 
-    _showLoadingIndicator(context, itemModel, op);
+    final loader = _showLoadingIndicator(context, itemModel, op);
 
     final model = await op.valueOrCancellation(null);
-    if (op.isCanceled || model == null) {
-      if (!op.isCanceled) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          log('Error closing loading dialog: $e');
-        }
-        if (!showPlaybackOption) {
-          FladderSnack.show(context.localized.unableToPlayMedia, context: context);
-        }
+    if (loader.isCancelled || model == null) {
+      loader.dismissDialog();
+      if (!loader.isCancelled && !showPlaybackOption) {
+        FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
     }
 
     final actualStartPosition = startPosition ?? await model.startDuration() ?? Duration.zero;
 
-    await _playVideo(context, startPosition: actualStartPosition, current: model, ref: ref, cancelOperation: op);
+    await _playVideo(context, startPosition: actualStartPosition, current: model, ref: ref, loader: loader);
   }
 }
 
@@ -677,16 +660,12 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
       return (model, expandedList);
     }));
 
-    _showLoadingIndicator(context, null, op);
+    final loader = _showLoadingIndicator(context, null, op);
 
     final result = await op.valueOrCancellation(null);
-    if (op.isCanceled || result == null) {
-      if (!op.isCanceled) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          log('Error closing loading dialog: $e');
-        }
+    if (loader.isCancelled || result == null) {
+      loader.dismissDialog();
+      if (!loader.isCancelled) {
         FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
@@ -696,7 +675,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
     final List<ItemBaseModel> expandedList = result.$2;
 
     if (context.mounted) {
-      await _playVideo(context, ref: ref, queue: expandedList, current: model, cancelOperation: op);
+      await _playVideo(context, ref: ref, queue: expandedList, current: model, loader: loader);
       if (context.mounted) {
         RefreshState.maybeOf(context)?.refresh();
       }
@@ -740,16 +719,12 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
       return (model, expandedList);
     }));
 
-    _showLoadingIndicator(context, null, op);
+    final loader = _showLoadingIndicator(context, null, op);
 
     final result = await op.valueOrCancellation(null);
-    if (op.isCanceled || result == null) {
-      if (!op.isCanceled) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (e) {
-          log('Error closing loading dialog: $e');
-        }
+    if (loader.isCancelled || result == null) {
+      loader.dismissDialog();
+      if (!loader.isCancelled) {
         FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
@@ -759,11 +734,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
     final List<ItemBaseModel> expandedList = result.$2;
 
     if (model == null || expandedList.isEmpty) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (e) {
-        log('Error closing loading dialog: $e');
-      }
+      loader.dismissDialog();
       FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       return;
     }
@@ -772,9 +743,7 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
         expandedList.indexWhere((element) => element.id == model.item.id).clamp(0, expandedList.length - 1);
     final actualStartPosition = await model.startDuration() ?? Duration.zero;
 
-    try {
-      Navigator.of(context, rootNavigator: true).pop();
-    } catch (_) {}
+    loader.dismissDialog();
 
     await ref.read(videoPlayerProvider.notifier).loadAudioPlaybackItem(
           model,
@@ -789,113 +758,164 @@ extension ItemBaseModelsBooleans on List<ItemBaseModel> {
   }
 }
 
-Future<void> _showLoadingIndicator(BuildContext context, ItemBaseModel? item, CancelableOperation op) async {
-  return showDialog(
+/// Owns the lifecycle of a "loading media" dialog and the cancelable work behind it.
+///
+/// A single owner is what makes the loading flow safe: it guarantees the dialog is
+/// dismissed exactly once (from either the completion path or a user cancel) and that a
+/// back gesture during loading reliably cancels the work. Previously each call site
+/// popped the root navigator blindly, so a back press that had already dismissed the
+/// dialog left the completion path popping a real screen — and any playback started by
+/// [VideoPlayerNotifier.loadPlaybackItem] kept running behind it.
+class _PlaybackLoader {
+  _PlaybackLoader(this._context, this._operation);
+
+  final BuildContext _context;
+  final CancelableOperation _operation;
+
+  bool _cancelled = false;
+  bool _dialogDismissed = false;
+
+  /// Whether the user cancelled loading, or the underlying operation was cancelled.
+  bool get isCancelled => _cancelled || _operation.isCanceled;
+
+  /// Cancels loading in response to a user action (back gesture or close button).
+  ///
+  /// Cancels the underlying operation — a no-op once it has already completed, which is
+  /// exactly the case while [_playVideo] is loading — and closes the loading dialog.
+  /// Callers observe [isCancelled] and abort the play flow.
+  void cancel() {
+    if (_cancelled) return;
+    _cancelled = true;
+    _operation.cancel();
+    dismissDialog();
+  }
+
+  /// Closes the loading dialog exactly once. Safe to call from any path, in any order.
+  void dismissDialog() {
+    if (_dialogDismissed) return;
+    _dialogDismissed = true;
+    if (!_context.mounted) return;
+    try {
+      Navigator.of(_context, rootNavigator: true).pop();
+    } catch (e) {
+      log('Error closing loading dialog: $e');
+    }
+  }
+}
+
+_PlaybackLoader _showLoadingIndicator(BuildContext context, ItemBaseModel? item, CancelableOperation op) {
+  final loader = _PlaybackLoader(context, op);
+  showDialog(
     barrierDismissible: false,
     useRootNavigator: true,
     context: context,
-    builder: (context) => _LoadIndicatorCancelable(op: op, item: item),
+    builder: (context) => _LoadIndicatorCancelable(loader: loader, item: item),
   );
+  return loader;
 }
 
 class _LoadIndicatorCancelable extends StatelessWidget {
   final ItemBaseModel? item;
-  final CancelableOperation op;
-  const _LoadIndicatorCancelable({required this.op, this.item});
+  final _PlaybackLoader loader;
+  const _LoadIndicatorCancelable({required this.loader, this.item});
 
   @override
   Widget build(BuildContext context) {
     final radius = const BorderRadius.all(Radius.circular(4));
 
-    return Dialog(
-      constraints: const BoxConstraints(
-        maxWidth: 450,
-        maxHeight: 500,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 16,
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 16,
-                children: [
-                  if (item != null)
-                    Flexible(
-                      child: Container(
-                        decoration: FladderTheme.defaultPosterDecoration,
-                        clipBehavior: Clip.hardEdge,
-                        height: 175,
-                        child: AspectRatio(
-                          aspectRatio: 0.7,
-                          child: SquareProgressIndicator(
-                            color: Theme.of(context).colorScheme.primary,
-                            strokeCap: StrokeCap.round,
-                            strokeWidth: 8,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: radius,
-                                  color: Theme.of(context).colorScheme.surfaceContainer,
-                                ),
-                                foregroundDecoration: BoxDecoration(
-                                  borderRadius: radius,
-                                  border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
-                                ),
-                                clipBehavior: Clip.hardEdge,
-                                child: FladderImage(
-                                  image: item!.getPosters?.primary,
-                                  fit: BoxFit.cover,
+    // canPop: false so a back gesture routes through the loader instead of silently
+    // popping the dialog. Cancelling closes the dialog itself, keeping dismissal in one place.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        loader.cancel();
+      },
+      child: Dialog(
+        constraints: const BoxConstraints(
+          maxWidth: 450,
+          maxHeight: 500,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            spacing: 16,
+            children: [
+              Expanded(
+                child: Row(
+                  spacing: 16,
+                  children: [
+                    if (item != null)
+                      Flexible(
+                        child: Container(
+                          decoration: FladderTheme.defaultPosterDecoration,
+                          clipBehavior: Clip.hardEdge,
+                          height: 175,
+                          child: AspectRatio(
+                            aspectRatio: 0.7,
+                            child: SquareProgressIndicator(
+                              color: Theme.of(context).colorScheme.primary,
+                              strokeCap: StrokeCap.round,
+                              strokeWidth: 8,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: radius,
+                                    color: Theme.of(context).colorScheme.surfaceContainer,
+                                  ),
+                                  foregroundDecoration: BoxDecoration(
+                                    borderRadius: radius,
+                                    border: Border.all(width: 1, color: Colors.white.withAlpha(45)),
+                                  ),
+                                  clipBehavior: Clip.hardEdge,
+                                  child: FladderImage(
+                                    image: item!.getPosters?.primary,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      )
+                    else
+                      SquareProgressIndicator(
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                    )
-                  else
-                    SquareProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 8,
-                      children: [
-                        Text(
-                          context.localized.loading,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        if (item != null) ...[
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 8,
+                        children: [
                           Text(
-                            item!.title,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            context.localized.loading,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
+                          if (item != null) ...[
+                            Text(
+                              item!.title,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad)
-              IconButton(
-                tooltip: context.localized.close,
-                onPressed: () {
-                  try {
-                    op.cancel();
-                  } catch (_) {}
-                  Navigator.of(context, rootNavigator: true).pop();
-                },
-                icon: const Icon(IconsaxPlusLinear.close_square),
-              ),
-          ],
+              if (AdaptiveLayout.inputDeviceOf(context) != InputDevice.dPad)
+                IconButton(
+                  tooltip: context.localized.close,
+                  onPressed: () => loader.cancel(),
+                  icon: const Icon(IconsaxPlusLinear.close_square),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -909,21 +929,20 @@ Future<void> _playVideo(
   List<ItemBaseModel>? queue,
   required WidgetRef ref,
   VoidCallback? onPlayerExit,
-  CancelableOperation? cancelOperation,
+  _PlaybackLoader? loader,
 }) async {
   if (current == null) {
+    loader?.dismissDialog();
     if (context.mounted) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (e) {
-        log('Error closing loading dialog: $e');
-      }
       FladderSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
   }
 
-  if (cancelOperation?.isCanceled ?? false) return;
+  if (loader?.isCancelled ?? false) {
+    loader?.dismissDialog();
+    return;
+  }
 
   final actualStartPosition = startPosition ?? await current.startDuration() ?? Duration.zero;
 
@@ -932,25 +951,23 @@ Future<void> _playVideo(
         actualStartPosition,
       );
 
+  // loadPlaybackItem starts playback while the loading dialog is still up. If the user
+  // cancelled during that window, tear the player down so audio doesn't keep playing
+  // behind the dismissed dialog with no player screen to control it.
+  if (loader?.isCancelled ?? false) {
+    await ref.read(videoPlayerProvider).stop();
+    return;
+  }
+
   if (!loadedCorrectly) {
+    loader?.dismissDialog();
     if (context.mounted) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (e) {
-        log('Error closing loading dialog: $e');
-      }
       FladderSnack.show(context.localized.errorOpeningMedia, context: context);
     }
     return;
   }
 
-  if (cancelOperation?.isCanceled ?? false) return;
-
-  try {
-    Navigator.of(context, rootNavigator: true).pop();
-  } catch (_) {}
-
-  if (cancelOperation?.isCanceled ?? false) return;
+  loader?.dismissDialog();
 
   await ref.read(videoPlayerProvider.notifier).openPlayer(context);
   if (AdaptiveLayout.of(context).isDesktop && defaultTargetPlatform != TargetPlatform.macOS) {
@@ -958,7 +975,6 @@ Future<void> _playVideo(
   }
 
   if (context.mounted) {
-    if (cancelOperation?.isCanceled ?? false) return;
     await context.refreshData();
   }
 

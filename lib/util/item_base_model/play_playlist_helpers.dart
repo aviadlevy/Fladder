@@ -73,18 +73,14 @@ extension PlaylistModelPlayback on PlaylistModel? {
       return (classification: null, model: null, queue: <ItemBaseModel>[], isAudio: false, photos: full.gallery);
     }));
 
-    _showLoadingIndicator(context, playlist, op);
+    final loader = _showLoadingIndicator(context, playlist, op);
 
     final result = await op.valueOrCancellation(null);
 
-    if (!op.isCanceled) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (_) {}
-    }
+    loader.dismissDialog();
 
-    if (op.isCanceled || result == null) {
-      if (!op.isCanceled && context.mounted) {
+    if (loader.isCancelled || result == null) {
+      if (!loader.isCancelled && context.mounted) {
         FladderSnack.show(context.localized.unableToPlayMedia, context: context);
       }
       return;
@@ -128,7 +124,9 @@ extension PlaylistModelPlayback on PlaylistModel? {
       final actualStartPosition = startPosition ?? await model.startDuration() ?? Duration.zero;
       final loadedCorrectly = await ref.read(videoPlayerProvider.notifier).loadPlaybackItem(model, actualStartPosition);
       if (!loadedCorrectly) {
-        if (context.mounted) FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+        if (context.mounted) {
+          FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+        }
         return;
       }
       await ref.read(videoPlayerProvider.notifier).openPlayer(context);
@@ -164,18 +162,14 @@ Future<void> _playPlaylistMusic(BuildContext context, WidgetRef ref, String play
     return (model, initialQueue);
   }));
 
-  _showLoadingIndicator(context, null, op);
+  final loader = _showLoadingIndicator(context, null, op);
 
   final result = await op.valueOrCancellation(null);
 
-  if (!op.isCanceled) {
-    try {
-      Navigator.of(context, rootNavigator: true).pop();
-    } catch (_) {}
-  }
+  loader.dismissDialog();
 
-  if (op.isCanceled || result == null) {
-    if (!op.isCanceled && context.mounted) {
+  if (loader.isCancelled || result == null) {
+    if (!loader.isCancelled && context.mounted) {
       FladderSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
@@ -203,18 +197,14 @@ Future<void> _playPlaylistVideos(BuildContext context, WidgetRef ref, String pla
     return (model, classified.playable);
   }));
 
-  _showLoadingIndicator(context, null, op);
+  final loader = _showLoadingIndicator(context, null, op);
 
   final result = await op.valueOrCancellation(null);
 
-  if (!op.isCanceled) {
-    try {
-      Navigator.of(context, rootNavigator: true).pop();
-    } catch (_) {}
-  }
+  loader.dismissDialog();
 
-  if (op.isCanceled || result == null) {
-    if (!op.isCanceled && context.mounted) {
+  if (loader.isCancelled || result == null) {
+    if (!loader.isCancelled && context.mounted) {
       FladderSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
@@ -224,7 +214,9 @@ Future<void> _playPlaylistVideos(BuildContext context, WidgetRef ref, String pla
   final actualStartPosition = await model.startDuration() ?? Duration.zero;
   final loadedCorrectly = await ref.read(videoPlayerProvider.notifier).loadPlaybackItem(model, actualStartPosition);
   if (!loadedCorrectly) {
-    if (context.mounted) FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+    if (context.mounted) {
+      FladderSnack.show(context.localized.errorOpeningMedia, context: context);
+    }
     return;
   }
   await ref.read(videoPlayerProvider.notifier).openPlayer(context);
@@ -240,18 +232,14 @@ Future<void> _playPlaylistGallery(BuildContext context, WidgetRef ref, String pl
     return _classifyPlaylistItems(items).gallery;
   }));
 
-  _showLoadingIndicator(context, null, op);
+  final loader = _showLoadingIndicator(context, null, op);
 
   final photos = await op.valueOrCancellation(null);
 
-  if (!op.isCanceled) {
-    try {
-      Navigator.of(context, rootNavigator: true).pop();
-    } catch (_) {}
-  }
+  loader.dismissDialog();
 
-  if (op.isCanceled || photos == null || photos.isEmpty) {
-    if (!op.isCanceled && context.mounted) {
+  if (loader.isCancelled || photos == null || photos.isEmpty) {
+    if (!loader.isCancelled && context.mounted) {
       FladderSnack.show(context.localized.unableToPlayMedia, context: context);
     }
     return;
